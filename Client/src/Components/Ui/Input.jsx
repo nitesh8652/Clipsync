@@ -48,10 +48,10 @@ export default function ClipInput() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
+      <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
 
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 mt-8">
           <h1 className="text-[22px] font-extrabold text-white/85 tracking-wide mb-1">
             What can I help you Copy?
           </h1>
@@ -75,7 +75,7 @@ export default function ClipInput() {
                 onChange={handleInput}
                 onKeyDown={handleKeyDown}
                 rows={1}
-                placeholder="Ask me anything..."
+                placeholder="Paste here anything..."
                 className="flex-1 bg-transparent p-0.75 outline-none text-white/88 text-[14px] resize-none placeholder:text-white/25"
               />
             </div>
@@ -107,7 +107,7 @@ export default function ClipInput() {
         </div>
 
         {/* Hints */}
-        <div className="flex flex-wrap gap-2 mt-4 justify-center">
+        {/* <div className="flex flex-wrap gap-2 mt-4 justify-center">
           {hints.map((hint) => (
             <button
               key={hint}
@@ -117,7 +117,7 @@ export default function ClipInput() {
               {hint}
             </button>
           ))}
-        </div>
+        </div> */}
       </div>
       <Home/>
     </>

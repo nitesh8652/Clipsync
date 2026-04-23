@@ -138,6 +138,7 @@ function HistoryCard({ item, index }) {
           ) : (
             <>
               <Download size={13} />
+              
               <span>Download</span>
             </>
           )}
