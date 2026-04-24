@@ -50,9 +50,8 @@ export default function Navbar() {
       {/* Right side */}
       <div className="flex items-center justify-center gap-3">
         {user ? (
+          
           <>
-
-
             <button
               onClick={handleSignOut}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-sm text-stone-700 hover:bg-stone-50 font-semibold">

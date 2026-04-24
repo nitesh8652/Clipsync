@@ -6,6 +6,7 @@ import {
   Languages,
   Copy,
   Download,
+  Clock,
 } from "lucide-react";
 
 const historyItems = [
@@ -34,7 +35,7 @@ const historyItems = [
   },
   {
     id: 3,
- icon: <FileText size={15} />,
+    icon: <FileText size={15} />,
     iconBg: "#eaf0fb",
     iconColor: "#3a5fbf",
     title: "React Component Structure",
@@ -45,7 +46,7 @@ const historyItems = [
   },
   {
     id: 4,
- icon: <FileText size={15} />,
+    icon: <FileText size={15} />,
     iconBg: "#fdf0e8",
     iconColor: "#bf6a3a",
     title: "Translation: Greeting",
@@ -105,7 +106,7 @@ function HistoryCard({ item, index }) {
           </div>
         ) : item.preview ? (
           <p
-            className="text-xs leading-relaxed line-clamp-3 text-[#7a7568]" 
+            className="text-xs leading-relaxed line-clamp-3 text-[#7a7568]"
             style={{
               fontFamily:
                 item.type === "code"
@@ -122,7 +123,10 @@ function HistoryCard({ item, index }) {
 
       {/* Bottom */}
       <div className="flex items-center justify-between mt-4">
-        <span className="text-xs text-[#a09890]">{item.time}</span>
+        <div className="text-xs flex gap-2   text-[#a09890]">
+          <Clock className="size-4" />
+          {item.time}
+        </div>
 
         <button
           onClick={handleAction}
@@ -138,7 +142,7 @@ function HistoryCard({ item, index }) {
           ) : (
             <>
               <Download size={13} />
-              
+
               <span>Download</span>
             </>
           )}

@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true },
     avatar: String,
-    lastLogin: { type: Date, default: Date.now }, // ✅ FIX: was missing, passport.js saves it
+    lastLogin: { type: Date, default: Date.now }, 
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);
