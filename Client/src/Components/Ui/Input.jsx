@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowUp, Plus } from "lucide-react";
 import Navbar from "./Navbar";
 import Home from "./Home";
@@ -14,13 +14,21 @@ export default function ClipInput() {
   const [value, setValue] = useState("");
   const fileInputRef = useRef(null);
 
-  const handleInput = (e) => {
-    setValue(e.target.value);
-  };
+  // Get token from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (token) {
+      localStorage.setItem("token", token);
+      // Clean token from URL without reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+      console.log("✅ Logged in, token saved.");
+    }
+  }, []);
 
   const handleSend = () => {
     if (!value.trim()) return;
-    console.log("Sending text:", value);
+    console.log("Sending:", value);
     setValue("");
   };
 
@@ -30,10 +38,6 @@ export default function ClipInput() {
     console.log("Selected file:", file.name);
   };
 
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -41,26 +45,17 @@ export default function ClipInput() {
     }
   };
 
-  const fillInput = (text) => {
-    setValue(text);
-  };
-
   return (
     <>
       <Navbar />
       <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
-
-        {/* Header */}
         <div className="text-center mb-8 mt-8">
           <h1 className="text-[22px] font-extrabold text-white/85 tracking-wide mb-1">
             What can I help you Copy?
           </h1>
-          <p className="text-[13px] text-white/30 tracking-widest">
-            Made by Nitesh!
-          </p>
+          <p className="text-[13px] text-white/30 tracking-widest">Made by Nitesh!</p>
         </div>
 
-        {/* Input */}
         <div className="relative w-full max-w-130">
           <div
             className="rounded-[18px] p-[1.5px]"
@@ -72,7 +67,7 @@ export default function ClipInput() {
             <div className="bg-[#1F1F1E] rounded-[17px] px-12 py-3 flex items-end gap-3 relative">
               <textarea
                 value={value}
-                onChange={handleInput}
+                onChange={(e) => setValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
                 placeholder="Paste here anything..."
@@ -81,45 +76,24 @@ export default function ClipInput() {
             </div>
           </div>
 
-          {/* File Input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-          />
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-          {/* Attach */}
           <button
-            onClick={triggerFileSelect}
+            onClick={() => fileInputRef.current?.click()}
             className="absolute left-3 bottom-3.25 cursor-pointer p-1 text-white/80 hover:bg-black/20 rounded-xl"
           >
             <Plus size={22} />
           </button>
 
-          {/* Send */}
           <button
             onClick={handleSend}
-            className="absolute bottom-2.25 right-2.5 w-8.5 h-8.5 bg-white/80 hover:bg-white hover:rounded-full text-black  flex items-center justify-center rounded-xl  cursor-pointer "
+            className="absolute bottom-2.25 right-2.5 w-8.5 h-8.5 bg-white/80 hover:bg-white hover:rounded-full text-black flex items-center justify-center rounded-xl cursor-pointer"
           >
             <ArrowUp size={18} />
           </button>
         </div>
-
-        {/* Hints */}
-        {/* <div className="flex flex-wrap gap-2 mt-4 justify-center">
-          {hints.map((hint) => (
-            <button
-              key={hint}
-              onClick={() => fillInput(hint)}
-              className="text-[11px] text-white/40 border border-white/10 rounded-full px-3 py-1 hover:text-white/70"
-            >
-              {hint}
-            </button>
-          ))}
-        </div> */}
       </div>
-      <Home/>
+      <Home />
     </>
   );
 }
