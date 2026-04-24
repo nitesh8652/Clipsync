@@ -13,6 +13,8 @@ const hints = [
 export default function ClipInput() {
   const [value, setValue] = useState("");
   const fileInputRef = useRef(null);
+  const [user, setUser] = useState(null);
+
 
   // Get token from URL
   useEffect(() => {
@@ -22,6 +24,8 @@ export default function ClipInput() {
       localStorage.setItem("token", token);
       // Clean token from URL without reload
       window.history.replaceState({}, document.title, window.location.pathname);
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setUser(payload);
       console.log("✅ Logged in, token saved.");
     }
   }, []);
@@ -51,7 +55,7 @@ export default function ClipInput() {
       <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
         <div className="text-center mb-8 mt-8">
           <h1 className="text-[22px] font-extrabold text-white/85 tracking-wide mb-1">
-            What can I help you Copy?
+            What can I help you Copy, {user?.name || "😘"}?
           </h1>
           <p className="text-[13px] text-white/30 tracking-widest">Made by Nitesh!</p>
         </div>

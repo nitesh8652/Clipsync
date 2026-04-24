@@ -105,7 +105,7 @@ function HistoryCard({ item, index }) {
           </div>
         ) : item.preview ? (
           <p
-            className="text-xs leading-relaxed line-clamp-3 text-[#7a7568]"
+            className="text-xs leading-relaxed line-clamp-3 text-[#7a7568]" 
             style={{
               fontFamily:
                 item.type === "code"
@@ -127,8 +127,8 @@ function HistoryCard({ item, index }) {
         <button
           onClick={handleAction}
           className="flex items-center gap-1.5 text-xs px-2.5 py-2 rounded-lg 
-          text-[#7a7568] border border-transparent transition-all duration-150
-          hover:bg-[#ede9e0] hover:border-[#d4cfc6] font-bold"
+          text-[#99968e] bg-[#1F1F1E] border border-transparent transition-all duration-150
+          hover:bg-[#ede9e0] hover:border-[#d4cfc6] font-bold hover:text-[#1F1F1E]"
         >
           {item.action === "copy" ? (
             <>

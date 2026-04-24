@@ -14,10 +14,14 @@ router.get("/google/callback",
     (req, res) => {
         try {                          
             const token = jwt.sign(
-                { id: req.user._id, email: req.user.email, name: req.user.name, avatar: req.user.avatar },
+                { id: req.user._id, 
+                    email: req.user.email,
+                    name: req.user.name, 
+                    avatar: req.user.avatar || null },
                 process.env.JWT_SECRET,
                 { expiresIn: "7d" }
             );
+            console.log("Avatar being signed:", req.user.avatar);
             res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${token}`);
         } catch (err) {
             console.error("JWT Error:", err);

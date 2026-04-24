@@ -1,4 +1,4 @@
-import { User2Icon, UserCheck2Icon } from "lucide-react";
+import { User2Icon, UserCheck2Icon, UserLockIcon, UserMinus2, UserPlus2Icon } from "lucide-react";
 import { useState, useEffect } from "react";
 
 
@@ -48,38 +48,57 @@ export default function Navbar() {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-center gap-3">
         {user ? (
           <>
 
-            <span className="text-[13px] font-medium">{user.name}</span>
+
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-sm text-stone-700 hover:bg-stone-50">
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-sm text-stone-700 hover:bg-stone-50 font-semibold">
 
               <GoogleIcon />
-              Signed In
+              Logout
             </button>
           </>
         ) :
 
           <button
             onClick={handleSignIn}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-sm text-stone-700 hover:bg-stone-50"
-          >
+            className="flex items-center gap-2 px-4 py-2 rounded-lg
+            bg-white text-black font-medium text-sm
+            hover:scale-[1.03] hover:shadow-md transition-all duration-200"          >
             <GoogleIcon />
             <span className="text-[13px] font-medium">Sign in with Google</span>
           </button>
 
         }
 
-        <button className="w-9 h-9 rounded-full overflow-hidden border border-stone-300">
-          {user?.avatar ? (
-            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-          ) : (
-            <User2Icon className="text-stone-500" />
-          )}
-        </button>
+        {user && (
+
+          <div className="relative group">
+            <button className="w-9 h-9 rounded-full overflow-hidden border border-stone-300 shadow-2xl">
+              {user?.avatar && (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-full h-full object-cover "
+                  referrerPolicy="no-referrer"
+                  onError={(e) => { e.target.style.display = 'none' }}
+                />
+
+              )}
+            </button>
+
+            {user?.name && (
+              <div className="absolute right-0 top-11 bg-[#2C2C2A] text-white/80 text-xs px-3 py-1.5 rounded-lg 
+            opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap font-bold border border-stone-700 mt-4">
+                {user.name}
+              </div>
+            )}
+          </div>
+
+        )}
 
       </div>
     </nav>
