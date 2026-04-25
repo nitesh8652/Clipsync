@@ -4,26 +4,33 @@ import Navbar from "./Navbar";
 import Home from "./Home";
 
 const typeStyles = [
-  { iconBg: "#e8f5ee", iconColor: "#3a8f5c" },
-  { iconBg: "#eaf0fb", iconColor: "#3a5fbf" },
-  { iconBg: "#f0ede8", iconColor: "#8a7560" },
-  { iconBg: "#fdf0e8", iconColor: "#bf6a3a" },
-  { iconBg: "#f3e8fd", iconColor: "#7c3abf" },
-  { iconBg: "#fef9e8", iconColor: "#b89a2a" },
-  { iconBg: "#fde8ee", iconColor: "#bf3a5f" },
+  { iconBg: "#e8f8f5", iconColor: "#2fa38a" }, // teal soft
+  { iconBg: "#eef2ff", iconColor: "#4f46e5" }, // indigo
+  { iconBg: "#f0fdf4", iconColor: "#22c55e" }, // green
+  { iconBg: "#fff7ed", iconColor: "#f97316" }, // orange
+  { iconBg: "#f5f3ff", iconColor: "#8b5cf6" }, // violet
+  { iconBg: "#ecfeff", iconColor: "#06b6d4" }, // cyan
+  { iconBg: "#fef2f2", iconColor: "#ef4444" }, // red
+  { iconBg: "#f8fafc", iconColor: "#334155" }, // slate
+  { iconBg: "#fff1f2", iconColor: "#e11d48" }, // rose
+  { iconBg: "#fffbeb", iconColor: "#d97706" }, // amber
+  { iconBg: "#f0f9ff", iconColor: "#0284c7" }, // sky blue
+  { iconBg: "#faf5ff", iconColor: "#a855f7" }, // purple light
+  { iconBg: "#ecfdf5", iconColor: "#059669" }, // emerald
+  { iconBg: "#fefce8", iconColor: "#ca8a04" }, // yellow
+  { iconBg: "#f1f5f9", iconColor: "#475569" }, // cool gray
 ];
 
 let lastStyleIndex = -1
 
-function randomStyle(){
+function randomStyle() {
   let index
-  do{
-index= Math.floor(Math.random()*typeStyles.length)
-  }while (index === lastStyleIndex);
+  do {
+    index = Math.floor(Math.random() * typeStyles.length)
+  } while (index === lastStyleIndex);
   lastStyleIndex = index
   return typeStyles[index]
 
-  
 }
 
 export default function ClipInput() {
@@ -51,7 +58,7 @@ export default function ClipInput() {
       icon: <FileText size={15} />,
       iconBg, iconColor,
       type: "text",
-      title: value.slice(0, 40) + (value.length > 40 ? "..." : ""),
+      title: value.slice(0, 8) + (value.length > 8 ? "..." : ""),
       preview: value,
       time: "Just now",
       action: "copy",
@@ -63,13 +70,13 @@ export default function ClipInput() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+    const isDownloadable = file.type === "application/pdf" || file.name.endsWith(".pdf") || file.name.endsWith(".docx") || file.type === "application/zip" || file.name.endsWith(".zip") || file.name.endsWith(".zipped") || file.type.startsWith("audio/") || file.name.endsWith(".mp3") || file.type.startsWith("video/") || file.name.endsWith(".mp4") || file.type.startsWith("image/") || file.name.endsWith(".ppt") || file.name.endsWith(".pptx");
     const { iconBg, iconColor } = randomStyle();
     setItems((prev) => [{
       id: Date.now(),
       icon: <FileText size={15} />,
       iconBg, iconColor,
-      type: isPdf ? "pdf" : "text",
+      type: isDownloadable ? "pdf" : "text",
       title: file.name,
       preview: null,
       time: "Just now",
@@ -117,7 +124,11 @@ export default function ClipInput() {
             </div>
           </div>
 
-          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+          <input type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+          accept=".pdf,.docx,.zip,.zipped,.mp3,.mp4,.ppt,.pptx,image/*,audio/*,video/*"
+          className="hidden" />
 
           <button
             onClick={() => fileInputRef.current?.click()}
