@@ -13,8 +13,17 @@ const typeStyles = [
   { iconBg: "#fde8ee", iconColor: "#bf3a5f" },
 ];
 
-function randomStyle() {
-  return typeStyles[Math.floor(Math.random() * typeStyles.length)];
+let lastStyleIndex = -1
+
+function randomStyle(){
+  let index
+  do{
+index= Math.floor(Math.random()*typeStyles.length)
+  }while (index === lastStyleIndex);
+  lastStyleIndex = index
+  return typeStyles[index]
+
+  
 }
 
 export default function ClipInput() {
