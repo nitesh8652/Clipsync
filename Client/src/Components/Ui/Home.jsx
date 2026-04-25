@@ -2,14 +2,12 @@ import { useState } from "react";
 import {
   FileText,
   FileDown,
-  Code2,
-  Languages,
   Copy,
   Download,
   Clock,
 } from "lucide-react";
 
-const historyItems = [
+const staticHistoryItems  = [
   {
     id: 1,
     icon: <FileText size={15} />,
@@ -58,15 +56,24 @@ const historyItems = [
   },
 ];
 
-function HistoryCard({ item, index }) {
+const staticItems = [
+  { id: 1, icon: <FileText size={15} />, iconBg: "#e8f5ee", iconColor: "#3a8f5c", title: "Project Proposal Draft", preview: "Here is a draft for the upcoming Q3 project proposal focusing on sustainable design initiatives...", time: "2 hours ago", action: "copy", type: "text" },
+  { id: 2, icon: <FileText size={15} />, iconBg: "#f0ede8", iconColor: "#8a7560", title: "Q2_Financial_Report.pdf", preview: null, time: "Yesterday", action: "download", type: "pdf" },
+  { id: 3, icon: <FileText size={15} />, iconBg: "#eaf0fb", iconColor: "#3a5fbf", title: "React Component Structure", preview: "const UserProfile = ({ user }) => { return (\n\n  ..", time: "Oct 12", action: "copy", type: "code" },
+  { id: 4, icon: <FileText size={15} />, iconBg: "#fdf0e8", iconColor: "#bf6a3a", title: "Translation: Greeting", preview: "Bonjour, j'espère que vous passez une excellente journée...", time: "Oct 10", action: "copy", type: "text" },
+];
+
+function HistoryCard({ item, index, isNew }) {
   const [copied, setCopied] = useState(false);
 
   const handleAction = () => {
     if (item.action === "copy") {
+        navigator.clipboard.writeText(item.rawText || item.preview || item.title).catch(()=>{})
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     }
   };
+
 
   return (
     <div
@@ -152,7 +159,9 @@ function HistoryCard({ item, index }) {
   );
 }
 
-export default function RecentHistory() {
+export default function RecentHistory({items = []}) {
+  const allItems = [...items, ...staticItems];
+
   return (
     <div className="min-h-screen flex items-start justify-center pt-10 px-6 bg-[#1F1F1E]">
       <div className="w-full max-w-2xl">
@@ -175,7 +184,7 @@ export default function RecentHistory() {
 
         {/* Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {historyItems.map((item, index) => (
+            {allItems.map((item, index) => (
             <HistoryCard key={item.id} item={item} index={index} />
           ))}
         </div>

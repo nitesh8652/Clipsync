@@ -1,19 +1,24 @@
 import { useState, useRef, useEffect } from "react";
-import { ArrowUp, Plus } from "lucide-react";
+import { ArrowUp, FileText, Plus } from "lucide-react";
 import Navbar from "./Navbar";
 import Home from "./Home";
 
-const hints = [
-  "Build a REST API with Express",
-  "Create a React component",
-  "Design a MongoDB schema",
-  "Set up Tailwind CSS config",
-];
+const typeStyles = {
+  text: { iconBg: "#e8f5ee", iconColor: "#3a8f5c" },
+  code: { iconBg: "#eaf0fb", iconColor: "#3a5fbf" },
+  pdf: { iconBg: "#f0ede8", iconColor: "#8a7560" },
+}
+
+function detectType(text) {
+  if (/^\s*(const|let|var|function|import|export|class|if|for|<)/.test(text)) return "code";
+  return "text";
+}
 
 export default function ClipInput() {
   const [value, setValue] = useState("");
-  const fileInputRef = useRef(null);
   const [user, setUser] = useState(null);
+  const [items, setItems] = useState([])
+  const fileInputRef = useRef(null);
 
 
   // Get token from URL
@@ -30,8 +35,24 @@ export default function ClipInput() {
     }
   }, []);
 
+
+
   const handleSend = () => {
     if (!value.trim()) return;
+    const type = detectType(value)
+    const { iconBg, iconColor } = typeStyles[type]
+    setItems((prev) => [{
+      id: Date.now(),
+      icon: <FileText size={15} />,
+      iconBg, iconColor, type,
+      title: value.slice(0, 15) + (value.length > 15 ? "..." : ""),
+      preview: value,
+      time: "Just now",
+      action: "copy",
+      rawText: value,
+    }, ...prev])
+    setValue("")
+
     console.log("Sending:", value);
     setValue("");
   };
@@ -39,6 +60,20 @@ export default function ClipInput() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+    const {iconBg, iconColor} = typeStyles[isPdf ? "pdf" : "text"]
+    setItems((prev) => [{
+      id:Date.now(),
+      icon:<FileText size={15}/>,
+      iconBg, iconColor,
+      type: isPdf ? "pdf" : "text",
+      title: file.name,
+      preview: null,
+      time: "Just now",
+      action: "download",
+      file
+    }, ...prev])
+    e.target.value = "",
     console.log("Selected file:", file.name);
   };
 
@@ -97,7 +132,7 @@ export default function ClipInput() {
           </button>
         </div>
       </div>
-      <Home />
+      <Home items={items} />
     </>
   );
 }
