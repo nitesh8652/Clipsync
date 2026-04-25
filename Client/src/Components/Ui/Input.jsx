@@ -3,57 +3,51 @@ import { ArrowUp, FileText, Plus } from "lucide-react";
 import Navbar from "./Navbar";
 import Home from "./Home";
 
-const typeStyles = {
-  text: { iconBg: "#e8f5ee", iconColor: "#3a8f5c" },
-  code: { iconBg: "#eaf0fb", iconColor: "#3a5fbf" },
-  pdf: { iconBg: "#f0ede8", iconColor: "#8a7560" },
-}
+const typeStyles = [
+  { iconBg: "#e8f5ee", iconColor: "#3a8f5c" },
+  { iconBg: "#eaf0fb", iconColor: "#3a5fbf" },
+  { iconBg: "#f0ede8", iconColor: "#8a7560" },
+  { iconBg: "#fdf0e8", iconColor: "#bf6a3a" },
+  { iconBg: "#f3e8fd", iconColor: "#7c3abf" },
+  { iconBg: "#fef9e8", iconColor: "#b89a2a" },
+  { iconBg: "#fde8ee", iconColor: "#bf3a5f" },
+];
 
-function detectType(text) {
-  if (/^\s*(const|let|var|function|import|export|class|if|for|<)/.test(text)) return "code";
-  return "text";
+function randomStyle() {
+  return typeStyles[Math.floor(Math.random() * typeStyles.length)];
 }
 
 export default function ClipInput() {
   const [value, setValue] = useState("");
   const [user, setUser] = useState(null);
-  const [items, setItems] = useState([])
+  const [items, setItems] = useState([]);
   const fileInputRef = useRef(null);
 
-
-  // Get token from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     if (token) {
       localStorage.setItem("token", token);
-      // Clean token from URL without reload
       window.history.replaceState({}, document.title, window.location.pathname);
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUser(payload);
-      console.log("✅ Logged in, token saved.");
     }
   }, []);
 
-
-
   const handleSend = () => {
     if (!value.trim()) return;
-    const type = detectType(value)
-    const { iconBg, iconColor } = typeStyles[type]
+    const { iconBg, iconColor } = randomStyle();
     setItems((prev) => [{
       id: Date.now(),
       icon: <FileText size={15} />,
-      iconBg, iconColor, type,
-      title: value.slice(0, 15) + (value.length > 15 ? "..." : ""),
+      iconBg, iconColor,
+      type: "text",
+      title: value.slice(0, 40) + (value.length > 40 ? "..." : ""),
       preview: value,
       time: "Just now",
       action: "copy",
       rawText: value,
-    }, ...prev])
-    setValue("")
-
-    console.log("Sending:", value);
+    }, ...prev]);
     setValue("");
   };
 
@@ -61,20 +55,19 @@ export default function ClipInput() {
     const file = e.target.files[0];
     if (!file) return;
     const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
-    const {iconBg, iconColor} = typeStyles[isPdf ? "pdf" : "text"]
+    const { iconBg, iconColor } = randomStyle();
     setItems((prev) => [{
-      id:Date.now(),
-      icon:<FileText size={15}/>,
+      id: Date.now(),
+      icon: <FileText size={15} />,
       iconBg, iconColor,
       type: isPdf ? "pdf" : "text",
       title: file.name,
       preview: null,
       time: "Just now",
       action: "download",
-      file
-    }, ...prev])
-    e.target.value = "",
-    console.log("Selected file:", file.name);
+      file,
+    }, ...prev]);
+    e.target.value = "";
   };
 
   const handleKeyDown = (e) => {
