@@ -10,9 +10,10 @@ const authMiddleware = require("../Middleware/auth")
  */
 router.get("/", authMiddleware, async (req, res) => {
     try {
+        //users see only their clip
         const clips = await Clip.find({
             userId: req.user.id
-        }).sort({ createdAt: -1 }).limit(50)
+        }).sort({ createdAt: -1 }).limit(50) //desending order (newest first)
         res.json({ clips })
     } catch (err) {
         console.eror("Get/ clips error", err)
@@ -28,12 +29,14 @@ router.get("/", authMiddleware, async (req, res) => {
  */
 router.post("/", authMiddleware, async (req, res) => {
     try {
+        //destructing data from frontend 
         const { title, preview, rawText, type, action, iconBg, iconColor } = req.body
 
         if (!title) return res.status(400).json({ error: "title required" })
 
+        //clip is the moongoose model .create inserts a new document 
         const clip = await Clip.create({
-            userId: req.user.id,
+            userId: req.user.id, // links the clip to the loged-in user to see only their data 
             title,
             preview,
             rawText,
@@ -53,8 +56,8 @@ router.post("/", authMiddleware, async (req, res) => {
 router.delete("/:id",authMiddleware, async (req,res) => {
     try{
         const clip = await Clip.findOneAndDelete({
-            _id:req.params.id,
-            userId:req.user.id
+            _id:req.params.id, //find clip by clip id
+            userId:req.user.id //ensue clip belongs to the user
         })
         if(!clip) return res.status(404).json({error:"Clip Not Found"})
         res.json({success:true})
