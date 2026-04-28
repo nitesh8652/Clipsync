@@ -13,7 +13,10 @@ function authHeaders() {
 
 export async function fetchClips() {
     const res = await fetch(`${API_URL}/clips`, { headers: authHeaders() });
-    if (!res.ok) throw new Error("Failed to fetch clips");
+   if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Something went wrong");
+}
     return res.json(); // { clips: [...] }
 }
 
@@ -21,7 +24,7 @@ export async function createClip(clipData) {
     const res = await fetch(`${API_URL}/clips`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify(clipData),
+        body: JSON.stringify(clipData), //The browser doesn’t know how to convert this into a format the server understands -> converts object into string
     });
     if (!res.ok) throw new Error("Failed to create clip");
     return res.json(); // { clip }

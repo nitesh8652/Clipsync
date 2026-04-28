@@ -7,14 +7,19 @@ export function useSocket(token, {
     onNewClip,
     onDeleteClip
 } = {}) {
+
+    //Doesn’t trigger re-render when updated
     const socketRef = useRef(null)
 
     useEffect(() => {
+
+        //no token -> no connection
         if (!token) return
 
+
         const socket = io(SOCKET_URL, {
-            auth: { token },
-            transports: ["websocket"],
+            auth: { token },    //sends token to backend for authentication
+            transports: ["websocket"], //avoids polling
             reconnectionAttempts: 5,
             reconnectionDelay: 2000
         })
@@ -22,6 +27,11 @@ export function useSocket(token, {
         socket.on("connect", () => console.log("🔌 Socket connected"))
         socket.on("disconnect", () => console.log("🔌 Socket disconnected"))
         socket.on("connect_error", (err) => console.warn("Socket Err", err.message))
+
+        /**
+         @purpose server emits new clip -> hook catches it -> calls onNewClip
+         @des ?. optional channing calls function if it exists
+         */
 
         socket.on("clip:new", (clip) => onNewClip?.(clip))
         socket.on("clip:delete", (clipId) => onDeleteClip?.(clipId))
@@ -31,18 +41,19 @@ export function useSocket(token, {
 
     }, [token])
 
-    const emitNewClip = useCallback((clipId)=>{
-        socketRef.current?.emit("clip:new",clipId)
-    },[])
+    //prevents unnecessary re-renders
 
-    const emitDeleteClip = useCallback((clipId)=>{
-        socketRef.current?.emit("clip:delete",clipId)
-    },[])
+    const emitNewClip = useCallback((clipId) => {
+        socketRef.current?.emit("clip:new", clipId)
+    }, [])
 
-    return{
+    const emitDeleteClip = useCallback((clipId) => {
+        socketRef.current?.emit("clip:delete", clipId)
+    }, [])
+
+    return {
         emitNewClip,
-
         emitDeleteClip
-}
+    }
 
 }
