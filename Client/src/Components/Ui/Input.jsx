@@ -1,79 +1,182 @@
-import { useState, useRef, useEffect } from "react";
-import { ArrowUp, FileText, Plus } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { ArrowUp, FileText, Plus, Loader2 } from "lucide-react";
 import Navbar from "./Navbar";
 import Home from "./Home";
+import { useSocket } from "../../Hooks/useSocket";
+import { fetchClips, createClip, deleteClip } from "../../api/clips";
 
 const typeStyles = [
-  { iconBg: "#e8f8f5", iconColor: "#2fa38a" }, // teal soft
-  { iconBg: "#eef2ff", iconColor: "#4f46e5" }, // indigo
-  { iconBg: "#f0fdf4", iconColor: "#22c55e" }, // green
-  { iconBg: "#fff7ed", iconColor: "#f97316" }, // orange
-  { iconBg: "#f5f3ff", iconColor: "#8b5cf6" }, // violet
-  { iconBg: "#ecfeff", iconColor: "#06b6d4" }, // cyan
-  { iconBg: "#fef2f2", iconColor: "#ef4444" }, // red
-  { iconBg: "#f8fafc", iconColor: "#334155" }, // slate
-  { iconBg: "#fff1f2", iconColor: "#e11d48" }, // rose
-  { iconBg: "#fffbeb", iconColor: "#d97706" }, // amber
-  { iconBg: "#f0f9ff", iconColor: "#0284c7" }, // sky blue
-  { iconBg: "#faf5ff", iconColor: "#a855f7" }, // purple light
-  { iconBg: "#ecfdf5", iconColor: "#059669" }, // emerald
-  { iconBg: "#fefce8", iconColor: "#ca8a04" }, // yellow
-  { iconBg: "#f1f5f9", iconColor: "#475569" }, // cool gray
+  { iconBg: "#e8f8f5", iconColor: "#2fa38a" },
+  { iconBg: "#eef2ff", iconColor: "#4f46e5" },
+  { iconBg: "#f0fdf4", iconColor: "#22c55e" },
+  { iconBg: "#fff7ed", iconColor: "#f97316" },
+  { iconBg: "#f5f3ff", iconColor: "#8b5cf6" },
+  { iconBg: "#ecfeff", iconColor: "#06b6d4" },
+  { iconBg: "#fef2f2", iconColor: "#ef4444" },
+  { iconBg: "#f8fafc", iconColor: "#334155" },
+  { iconBg: "#fff1f2", iconColor: "#e11d48" },
+  { iconBg: "#fffbeb", iconColor: "#d97706" },
+  { iconBg: "#f0f9ff", iconColor: "#0284c7" },
+  { iconBg: "#faf5ff", iconColor: "#a855f7" },
+  { iconBg: "#ecfdf5", iconColor: "#059669" },
+  { iconBg: "#fefce8", iconColor: "#ca8a04" },
+  { iconBg: "#f1f5f9", iconColor: "#475569" },
 ];
 
-let lastStyleIndex = -1
-
+let lastStyleIndex = -1;
 function randomStyle() {
-  let index
-  do {
-    index = Math.floor(Math.random() * typeStyles.length)
-  } while (index === lastStyleIndex);
-  lastStyleIndex = index
-  return typeStyles[index]
+  let index;
+  do { index = Math.floor(Math.random() * typeStyles.length); }
+  while (index === lastStyleIndex);
+  lastStyleIndex = index;
+  return typeStyles[index];
+}
 
+// Decodes JWT payload without verifying (client-side read only)
+function decodeToken(token) {
+  try { return JSON.parse(atob(token.split(".")[1])); }
+  catch { return null; }
 }
 
 export default function ClipInput() {
   const [value, setValue] = useState("");
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | error
   const fileInputRef = useRef(null);
 
+  // ── Bootstrap: read token from URL param or localStorage ──────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      localStorage.setItem("token", token);
+    const urlToken = params.get("token");
+
+    let activeToken = urlToken || localStorage.getItem("token");
+    if (!activeToken) return;
+
+    if (urlToken) {
+      localStorage.setItem("token", urlToken);
       window.history.replaceState({}, document.title, window.location.pathname);
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUser(payload);
     }
+
+    const payload = decodeToken(activeToken);
+    setToken(activeToken);
+    setUser(payload);
   }, []);
 
-  const handleSend = () => {
+  // ── Load clips from server when user is available ────────────────────
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    fetchClips()
+      .then(({ clips }) => setItems(clips.map(normalizeClip)))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  // ── Socket.IO real-time sync ─────────────────────────────────────────
+  const handleRemoteNewClip = useCallback((clip) => {
+    setSyncStatus("synced");
+    setTimeout(() => setSyncStatus("idle"), 2000);
+    setItems((prev) => [normalizeClip(clip), ...prev]);
+  }, []);
+
+  const handleRemoteDeleteClip = useCallback((clipId) => {
+    setItems((prev) => prev.filter((i) => i._id !== clipId && i.id !== clipId));
+  }, []);
+
+  const { emitNewClip, emitDeleteClip } = useSocket(token, {
+    onNewClip: handleRemoteNewClip,
+    onDeleteClip: handleRemoteDeleteClip,
+  });
+
+  // ── Normalize DB clip to UI shape ────────────────────────────────────
+  function normalizeClip(clip) {
+    return {
+      ...clip,
+      id: clip._id || clip.id,
+      icon: <FileText size={15} />,
+      time: formatTime(clip.createdAt || clip.time),
+    };
+  }
+
+  function formatTime(dateStr) {
+    if (!dateStr) return "Just now";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
+  // ── Send text clip ───────────────────────────────────────────────────
+  const handleSend = async () => {
     if (!value.trim()) return;
     const { iconBg, iconColor } = randomStyle();
-    setItems((prev) => [{
-      id: Date.now(),
+    const title = value.slice(0, 40) + (value.length > 40 ? "…" : "");
+
+    const optimisticClip = {
+      id: `opt-${Date.now()}`,
       icon: <FileText size={15} />,
       iconBg, iconColor,
       type: "text",
-      title: value.slice(0, 8) + (value.length > 8 ? "..." : ""),
+      title,
       preview: value,
       time: "Just now",
       action: "copy",
       rawText: value,
-    }, ...prev]);
+    };
+
+    setItems((prev) => [optimisticClip, ...prev]);
     setValue("");
+
+    if (!token) return; // not logged in — local only
+
+    setSending(true);
+    try {
+      const clipData = { title, preview: value, rawText: value, type: "text", action: "copy", iconBg, iconColor };
+      const { clip } = await createClip(clipData);
+      const normalized = normalizeClip(clip);
+
+      // Replace optimistic with real
+      setItems((prev) => prev.map((i) => i.id === optimisticClip.id ? normalized : i));
+
+      // Broadcast to other devices
+      emitNewClip(clip);
+    } catch (err) {
+      console.error("Failed to save clip:", err);
+      // keep the optimistic item, mark it locally
+    } finally {
+      setSending(false);
+    }
   };
 
+  // ── Delete clip ──────────────────────────────────────────────────────
+  const handleDelete = async (clipId) => {
+    setItems((prev) => prev.filter((i) => i.id !== clipId && i._id !== clipId));
+    if (!token || String(clipId).startsWith("opt-")) return;
+    try {
+      await deleteClip(clipId);
+      emitDeleteClip(clipId);
+    } catch (err) {
+      console.error("Failed to delete clip:", err);
+    }
+  };
+
+  // ── File upload (local only for now) ────────────────────────────────
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const isDownloadable = file.type === "application/pdf" || file.name.endsWith(".pdf") || file.name.endsWith(".docx") || file.type === "application/zip" || file.name.endsWith(".zip") || file.name.endsWith(".zipped") || file.type.startsWith("audio/") || file.name.endsWith(".mp3") || file.type.startsWith("video/") || file.name.endsWith(".mp4") || file.type.startsWith("image/") || file.name.endsWith(".ppt") || file.name.endsWith(".pptx");
+    const isDownloadable = ["application/pdf", "application/zip"].includes(file.type)
+      || file.type.startsWith("audio/") || file.type.startsWith("video/") || file.type.startsWith("image/")
+      || [".pdf", ".docx", ".zip", ".mp3", ".mp4", ".ppt", ".pptx"].some(ext => file.name.endsWith(ext));
     const { iconBg, iconColor } = randomStyle();
     setItems((prev) => [{
-      id: Date.now(),
+      id: `file-${Date.now()}`,
       icon: <FileText size={15} />,
       iconBg, iconColor,
       type: isDownloadable ? "pdf" : "text",
@@ -102,14 +205,20 @@ export default function ClipInput() {
             What can I help you Copy, {user?.name || "😘"}?
           </h1>
           <p className="text-[13px] text-white/30 tracking-widest">Made by Nitesh!</p>
+
+          {/* Sync status indicator */}
+          {syncStatus === "synced" && (
+            <p className="text-[11px] text-emerald-400/70 mt-1 animate-pulse">
+              ✦ New clip synced from another device
+            </p>
+          )}
         </div>
 
         <div className="relative w-full max-w-130">
           <div
             className="rounded-[18px] p-[1.5px]"
             style={{
-              background:
-                "linear-gradient(135deg, rgba(120,80,255,0.8), rgba(56,189,248,0.7), rgba(16,185,129,0.6), rgba(120,80,255,0.5))",
+              background: "linear-gradient(135deg, rgba(120,80,255,0.8), rgba(56,189,248,0.7), rgba(16,185,129,0.6), rgba(120,80,255,0.5))",
             }}
           >
             <div className="bg-[#1F1F1E] rounded-[17px] px-12 py-3 flex items-end gap-3 relative">
@@ -124,11 +233,13 @@ export default function ClipInput() {
             </div>
           </div>
 
-          <input type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileChange} 
-          accept=".pdf,.docx,.zip,.zipped,.mp3,.mp4,.ppt,.pptx,image/*,audio/*,video/*"
-          className="hidden" />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".pdf,.docx,.zip,.zipped,.mp3,.mp4,.ppt,.pptx,image/*,audio/*,video/*"
+            className="hidden"
+          />
 
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -139,13 +250,20 @@ export default function ClipInput() {
 
           <button
             onClick={handleSend}
-            className="absolute bottom-2.25 right-2.5 w-8.5 h-8.5 bg-white/80 hover:bg-white hover:rounded-full text-black flex items-center justify-center rounded-xl cursor-pointer"
+            disabled={sending}
+            className="absolute bottom-2.25 right-2.5 w-8.5 h-8.5 bg-white/80 hover:bg-white hover:rounded-full text-black flex items-center justify-center rounded-xl cursor-pointer disabled:opacity-50"
           >
-            <ArrowUp size={18} />
+            {sending ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={18} />}
           </button>
         </div>
+
+        {!token && (
+          <p className="text-[11px] text-white/25 mt-3">
+            Sign in with Google to sync across devices
+          </p>
+        )}
       </div>
-      <Home items={items} />
+      <Home items={items} loading={loading} onDelete={handleDelete} />
     </>
   );
 }
