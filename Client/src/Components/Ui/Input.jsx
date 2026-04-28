@@ -78,7 +78,7 @@ export default function ClipInput() {
 
   // ── Socket.IO real-time sync ─────────────────────────────────────────
   const handleRemoteNewClip = useCallback((clip) => {
-    setSyncStatus("synced");
+    setSyncStatus("synced"); //new data reciving from another device
     setTimeout(() => setSyncStatus("idle"), 2000);
     setItems((prev) => [normalizeClip(clip), ...prev]);
   }, []);
@@ -87,6 +87,7 @@ export default function ClipInput() {
     setItems((prev) => prev.filter((i) => i._id !== clipId && i.id !== clipId));
   }, []);
 
+  //Only establishes connection when token exists
   const { emitNewClip, emitDeleteClip } = useSocket(token, {
     onNewClip: handleRemoteNewClip,
     onDeleteClip: handleRemoteDeleteClip,
@@ -98,7 +99,7 @@ export default function ClipInput() {
       ...clip,
       id: clip._id || clip.id,
       icon: <FileText size={15} />,
-      time: formatTime(clip.createdAt || clip.time),
+      time: formatTime(clip.createdAt || clip.time), //Converts timestamps to relative human readable time
     };
   }
 
@@ -115,12 +116,24 @@ export default function ClipInput() {
 
   // ── Send text clip ───────────────────────────────────────────────────
   const handleSend = async () => {
-    if (!value.trim()) return;
+    if (!value.trim()) return; //prevent empty swnd
     const { iconBg, iconColor } = randomStyle();
     const title = value.slice(0, 40) + (value.length > 40 ? "…" : "");
 
+    /**
+     @description optimistic data flow
+     * User Clicks Send
+        ↓
+    Show item immediately (id: "opt-12345")
+        ↓
+    Send to server in background
+        ↓
+    Success → Replace "opt-12345" with real data (id: "67890abc")
+    Fail    → Keep optimistic item (offline-friendly)
+     */
+
     const optimisticClip = {
-      id: `opt-${Date.now()}`,
+      id: `opt-${Date.now()}`, //temporary id
       icon: <FileText size={15} />,
       iconBg, iconColor,
       type: "text",
@@ -131,7 +144,7 @@ export default function ClipInput() {
       rawText: value,
     };
 
-    setItems((prev) => [optimisticClip, ...prev]);
+    setItems((prev) => [optimisticClip, ...prev]); //instant ui
     setValue("");
 
     if (!token) return; // not logged in — local only
@@ -139,13 +152,13 @@ export default function ClipInput() {
     setSending(true);
     try {
       const clipData = { title, preview: value, rawText: value, type: "text", action: "copy", iconBg, iconColor };
-      const { clip } = await createClip(clipData);
+      const { clip } = await createClip(clipData); //send to server
       const normalized = normalizeClip(clip);
 
       // Replace optimistic with real
       setItems((prev) => prev.map((i) => i.id === optimisticClip.id ? normalized : i));
 
-      // Broadcast to other devices
+      // Broadcast/send to other devices
       emitNewClip(clip);
     } catch (err) {
       console.error("Failed to save clip:", err);
@@ -157,11 +170,13 @@ export default function ClipInput() {
 
   // ── Delete clip ──────────────────────────────────────────────────────
   const handleDelete = async (clipId) => {
+    //remove from UI instantly
     setItems((prev) => prev.filter((i) => i.id !== clipId && i._id !== clipId));
+    //In these cases, stop here—don’t call backend or socket”
     if (!token || String(clipId).startsWith("opt-")) return;
     try {
       await deleteClip(clipId);
-      emitDeleteClip(clipId);
+      emitDeleteClip(clipId); //brodcaste
     } catch (err) {
       console.error("Failed to delete clip:", err);
     }
