@@ -60,5 +60,36 @@ export async function uploadClipFile(file, { iconBg = "#f0fdf4", iconColor = "#2
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Upload failed");
     }
-    return res.json()
+    return res.json()  
+}
+
+/**
+ * @des enables to download file via backend avoids cloudinary auth
+ * fetches with jwt, converts to blob, -> browser save-as
+ */
+
+export async function downloadClipFile(clipId, filename){
+    const res = await fetch(`${API_URL}/clips/${clipId}/download`,{
+        headers:{
+            Authorization:`Bearer ${getToken()}`
+        }
+    })
+
+    if(!res.ok){
+        const body = await res.json().catch(()=>({}))
+        throw new Error (body.error || "Download failed")
+    }
+
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+
+// Programmatically click a hidden <a> to trigger the Save dialog
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "file";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
 }

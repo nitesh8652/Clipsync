@@ -8,15 +8,22 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+import { downloadClipFile } from "../../api/clips";
 
 function HistoryCard({ item, index, onDelete }) {
   const [copied, setCopied] = useState(false);
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (item.action === "copy") {
-      navigator.clipboard.writeText(item.rawText || item.preview || item.title).catch(() => {});
+      navigator.clipboard.writeText(item.rawText || item.preview || item.title).catch(() => { });
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+    } else if (item.action === "download") {
+      try {
+        await downloadClipFile(item._id || item.id, item.title);
+      } catch (error) {
+        console.error("Error downloading clip file:", error);
+      }
     }
   };
 

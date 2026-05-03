@@ -6,7 +6,10 @@ const authMiddleware = require("../Middleware/auth")
 const upload = require("../Middleware/upload")
 const cloudinary = require("../Config/cloudinary")
 
+
+
 const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 
 /**
  * @des upload a buffer to cloudinary
@@ -14,14 +17,53 @@ const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 function uploadToCloudinary(buffer, options) {
     return new Promise((resolve, reject) => {
-      
-const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+
+        const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
             if (err) return reject(err)
             resolve(result)
         })
         streamifier.createReadStream(buffer).pipe(stream)
     })
 }
+
+
+
+/**
+ *@desc proxy-download route to bypass Cloudinary "untrusted" restriction)
+ */
+
+router.get("/:id/download", authMiddleware, async (req, res) => {
+    try {
+        const clip = await Clip.findOne({ _id: req.params.id, userId: req.user.id });
+        if (!clip) return res.status(404).json({ error: "Clip not found" });
+        if (!clip.cloudinaryPublicId) return res.status(400).json({ error: "No file attached" });
+
+        const signedUrl = cloudinary.utils.private_download_url(
+            clip.cloudinaryPublicId,
+            null,
+            { resource_type: "raw", expires_at: Math.floor(Date.now() / 1000) + 60 }
+        );
+
+        const fileRes = await fetch(signedUrl);
+        console.log("Cloudinary fetch status:", fileRes.status, clip.fileUrl);
+        if (!fileRes.ok) return res.status(502).json({ error: "failed to fetch file" });
+
+        res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(clip.title)}"`);
+        res.setHeader("Content-Type", fileRes.headers.get("content-type") || "application/octet-stream");
+        const contentLength = fileRes.headers.get("content-length");
+        if (contentLength) res.setHeader("Content-Length", contentLength);
+
+        const { Readable } = require("stream");
+        Readable.fromWeb(fileRes.body).pipe(res);
+    } catch (err) {
+        console.error("GET /:id/download error", err);
+        if (!res.headersSent) res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+
+
+
 
 /**
  @desc  Schedule Cloudinary deletion to match MongoDB TTL
