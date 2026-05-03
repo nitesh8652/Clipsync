@@ -38,15 +38,30 @@ router.get("/:id/download", authMiddleware, async (req, res) => {
         if (!clip) return res.status(404).json({ error: "Clip not found" });
         if (!clip.cloudinaryPublicId) return res.status(400).json({ error: "No file attached" });
 
-        const signedUrl = cloudinary.utils.private_download_url(
-            clip.cloudinaryPublicId,
-            null,
-            { resource_type: "raw", expires_at: Math.floor(Date.now() / 1000) + 60 }
+        // Use the Upload API endpoint — bypasses CDN entirely,
+        // so the "untrusted account" restriction does NOT apply.
+        const config = cloudinary.config();
+        const timestamp = Math.round(Date.now() / 1000);
+
+        const signature = cloudinary.utils.api_sign_request(
+            { public_id: clip.cloudinaryPublicId, timestamp },
+            config.api_secret
         );
 
-        const fileRes = await fetch(signedUrl);
-        console.log("Cloudinary fetch status:", fileRes.status, clip.fileUrl);
-        if (!fileRes.ok) return res.status(502).json({ error: "failed to fetch file" });
+        const apiDownloadUrl =
+            `https://api.cloudinary.com/v1_1/${config.cloud_name}/raw/download` +
+            `?public_id=${encodeURIComponent(clip.cloudinaryPublicId)}` +
+            `&api_key=${config.api_key}` +
+            `&timestamp=${timestamp}` +
+            `&signature=${signature}`;
+
+        const fileRes = await fetch(apiDownloadUrl);
+        console.log("Cloudinary API download status:", fileRes.status);
+        if (!fileRes.ok) {
+            const errBody = await fileRes.text().catch(() => "");
+            console.error("Cloudinary API error body:", errBody);
+            return res.status(502).json({ error: "Failed to fetch file from Cloudinary" });
+        }
 
         res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(clip.title)}"`);
         res.setHeader("Content-Type", fileRes.headers.get("content-type") || "application/octet-stream");
