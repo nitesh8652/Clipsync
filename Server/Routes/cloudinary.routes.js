@@ -14,7 +14,8 @@ const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 function uploadToCloudinary(buffer, options) {
     return new Promise((resolve, reject) => {
-        const stream = cloudinary.upload_stream(options, (err, result) => {
+      
+const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
             if (err) return reject(err)
             resolve(result)
         })
