@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, FileText, Plus, Loader2 } from "lucide-react";
+import { ArrowUp, FileText, Plus, Loader2, Paperclip } from "lucide-react";
 import Navbar from "./Navbar";
 import Home from "./Home";
 import { useSocket } from "../../Hooks/useSocket";
-import { fetchClips, createClip, deleteClip } from "../../api/clips";
+import { fetchClips, createClip, deleteClip, uploadClipFile } from "../../api/clips";
 
 const typeStyles = [
   { iconBg: "#e8f8f5", iconColor: "#2fa38a" },
@@ -38,6 +38,8 @@ function decodeToken(token) {
   catch { return null; }
 }
 
+const ACCEPTED_FILE_TYPES = ".pdf,.ppt,.pptx,.doc,.docx,.zip";
+
 export default function ClipInput() {
   const [value, setValue] = useState("");
   const [user, setUser] = useState(null);
@@ -45,6 +47,8 @@ export default function ClipInput() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const [syncStatus, setSyncStatus] = useState("idle"); // idle | syncing | synced | error
   const fileInputRef = useRef(null);
 
@@ -183,25 +187,60 @@ export default function ClipInput() {
   };
 
   // ── File upload (local only for now) ────────────────────────────────
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    const isDownloadable = ["application/pdf", "application/zip"].includes(file.type)
-      || file.type.startsWith("audio/") || file.type.startsWith("video/") || file.type.startsWith("image/")
-      || [".pdf", ".docx", ".zip", ".mp3", ".mp4", ".ppt", ".pptx"].some(ext => file.name.endsWith(ext));
+    if (!file) return
+    e.target.value = "" //reset input after upload
+
+    setUploadError(null)
+
+    //validate file size
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError("File size must be less than 20 MB");
+      return;
+    }
+
     const { iconBg, iconColor } = randomStyle();
-    setItems((prev) => [{
-      id: `file-${Date.now()}`,
-      icon: <FileText size={15} />,
+
+    //showing uploading card immediately
+    const optimisticId = `opt-${Date.now()}`;
+    const optimisticClip = {
+      id: optimisticId,
+      icon: <Paperclip size={15} />,
       iconBg, iconColor,
-      type: isDownloadable ? "pdf" : "text",
+      type: "file",
       title: file.name,
       preview: null,
       time: "Just now",
       action: "download",
-      file,
-    }, ...prev]);
-    e.target.value = "";
+      fileUrl: null,
+      uploading: true,
+    };
+
+    setItems((prev) => [optimisticClip, ...prev]); //instant ui
+    setUploading(true)
+
+    if (!token) {
+      setUploading(false)
+      return
+    }
+
+    try {
+      const { clip } = await uploadClipFile(file, { iconBg, iconColor });
+      const normalized = { ...normalizeClip(clip), uploading: false }
+      setItems((prev) => prev.map((i) => i.id === optimisticId ? normalized : i))
+      emitNewClip(clip)
+    } catch (err) {
+      console.error("file upload failed", err)
+      setUploadError(err.message || "Upload failed")
+
+      //remove failed optimistic item
+      setItems((prev) => prev.filter((i) => i.id !== optimisticId));
+
+    } finally {
+      setUploading(false)
+    }
+
   };
 
   const handleKeyDown = (e) => {
@@ -211,7 +250,7 @@ export default function ClipInput() {
     }
   };
 
-  return (
+ return (
     <>
       <Navbar />
       <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
@@ -220,15 +259,21 @@ export default function ClipInput() {
             What can I help you Copy, {user?.name || "😘"}?
           </h1>
           <p className="text-[13px] text-white/30 tracking-widest">Made by Nitesh!</p>
-
-          {/* Sync status indicator */}
+ 
           {syncStatus === "synced" && (
             <p className="text-[11px] text-emerald-400/70 mt-1 animate-pulse">
               ✦ New clip synced from another device
             </p>
           )}
+ 
+          {/* Upload error banner */}
+          {uploadError && (
+            <p className="text-[11px] text-red-400/80 mt-1">
+              ✕ {uploadError}
+            </p>
+          )}
         </div>
-
+ 
         <div className="relative w-full max-w-130">
           <div
             className="rounded-[18px] p-[1.5px]"
@@ -247,22 +292,29 @@ export default function ClipInput() {
               />
             </div>
           </div>
-
+ 
+          {/* Hidden file input — only doc types now */}
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf,.docx,.zip,.zipped,.mp3,.mp4,.ppt,.pptx,image/*,audio/*,video/*"
+            accept={ACCEPTED_FILE_TYPES}
             className="hidden"
           />
-
+ 
+          {/* Attach button — shows spinner while uploading */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="absolute left-3 bottom-3.25 cursor-pointer p-1 text-white/80 hover:bg-black/20 rounded-xl"
+            disabled={uploading}
+            title="Attach file (PDF, PPT, DOC, ZIP — max 10 MB)"
+            className="absolute left-3 bottom-3.25 cursor-pointer p-1 text-white/80 hover:bg-black/20 rounded-xl disabled:opacity-40"
           >
-            <Plus size={22} />
+            {uploading
+              ? <Loader2 size={20} className="animate-spin text-emerald-400" />
+              : <Plus size={22} />
+            }
           </button>
-
+ 
           <button
             onClick={handleSend}
             disabled={sending}
@@ -271,14 +323,21 @@ export default function ClipInput() {
             {sending ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={18} />}
           </button>
         </div>
-
+ 
         {!token && (
           <p className="text-[11px] text-white/25 mt-3">
             Sign in with Google to sync across devices
           </p>
         )}
+ 
+        {/* Hint about supported file types */}
+        <p className="text-[10px] text-white/15 mt-2">
+          Attach: PDF · PPT · DOC · ZIP &nbsp;·&nbsp; max 10 MB &nbsp;·&nbsp; auto-deleted after 6 h
+        </p>
       </div>
+ 
       <Home items={items} loading={loading} onDelete={handleDelete} />
     </>
   );
+
 }

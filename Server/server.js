@@ -11,6 +11,7 @@ require("./Config/passport");
 
 const routes = require("./Routes/routes");
 const clipRoutes = require("./Routes/clips.route");
+const cloudinaryRoutes = require("./Routes/cloudinary.routes");
 
 const app = express();
 const server = http.createServer(app); // wrap express in http server to upgrade connections for Socket.IO
@@ -121,6 +122,7 @@ app.use(passport.session());
 // Routes
 app.use("/auth", routes);
 app.use("/clips", clipRoutes);
+app.use("/clips", cloudinaryRoutes);
 
 // Health check
 app.get("/health", (req, res) => res.json({ status: "ok" }));

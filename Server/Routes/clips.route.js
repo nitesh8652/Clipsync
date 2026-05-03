@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router()
-const Clip = require("../Models/clip.model")
+const Clip = require("../Models/file.model")
 const authMiddleware = require("../Middleware/auth")
 
 /**
