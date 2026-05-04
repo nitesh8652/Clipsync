@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router()
 const Clip = require("../Models/file.model")
 const authMiddleware = require("../Middleware/auth")
+const cloudinary = require("../Config/cloudinary")
 
 /**
  * @desc    Get all clips
@@ -27,6 +28,7 @@ router.get("/", authMiddleware, async (req, res) => {
  * @route   POST /api/clips
  * @access  Private
  */
+
 router.post("/", authMiddleware, async (req, res) => {
     try {
         //destructing data from frontend 
@@ -53,18 +55,33 @@ router.post("/", authMiddleware, async (req, res) => {
     }
 })
 
-router.delete("/:id",authMiddleware, async (req,res) => {
-    try{
+router.delete("/:id", authMiddleware, async (req, res) => {
+    try {
         const clip = await Clip.findOneAndDelete({
-            _id:req.params.id, //find clip by clip id
-            userId:req.user.id //ensue clip belongs to the user
-        })
-        if(!clip) return res.status(404).json({error:"Clip Not Found"})
-        res.json({success:true})
-        }catch(err){
-            console.error("Delete/ clips error", err)
-            res.status(500).json({ error: "Internal Server Error" })
+            _id: req.params.id,
+            userId: req.user.id
+        });
+
+        if (!clip) return res.status(404).json({ error: "Clip Not Found" });
+
+        // If this clip has a Cloudinary asset, delete it too
+        if (clip.cloudinaryPublicId) {
+            try {
+                await cloudinary.uploader.destroy(clip.cloudinaryPublicId, {
+                    resource_type: "raw"
+                });
+                console.log(`🗑️  Cloudinary asset deleted: ${clip.cloudinaryPublicId}`);
+            } catch (cloudErr) {
+                // Log but don't fail the request — MongoDB doc is already gone
+                console.error("Cloudinary delete failed:", cloudErr.message);
+            }
         }
-})
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Delete/ clips error", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 module.exports = router

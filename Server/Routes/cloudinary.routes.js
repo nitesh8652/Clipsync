@@ -1,11 +1,10 @@
 const express = require("express");
 const router = express.Router()
-const streamifier = require("streamifier");
+const streamifier = require("streamifier"); // buffer to stream (cloudinary supports only stream so need to convert)
 const Clip = require("../Models/file.model")
 const authMiddleware = require("../Middleware/auth")
 const upload = require("../Middleware/upload")
 const cloudinary = require("../Config/cloudinary")
-
 
 
 const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -22,6 +21,7 @@ function uploadToCloudinary(buffer, options) {
             if (err) return reject(err)
             resolve(result)
         })
+        // buffer → streamifier → readable stream → pipe → cloudinary stream
         streamifier.createReadStream(buffer).pipe(stream)
     })
 }
@@ -36,35 +36,27 @@ router.get("/:id/download", authMiddleware, async (req, res) => {
     try {
         const clip = await Clip.findOne({ _id: req.params.id, userId: req.user.id });
         if (!clip) return res.status(404).json({ error: "Clip not found" });
-        if (!clip.cloudinaryPublicId) return res.status(400).json({ error: "No file attached" });
+        if (!clip.fileUrl) return res.status(400).json({ error: "No file attached" });
 
-        // Use the Upload API endpoint — bypasses CDN entirely,
-        // so the "untrusted account" restriction does NOT apply.
-        const config = cloudinary.config();
-        const timestamp = Math.round(Date.now() / 1000);
+        console.log("Fetching fileUrl:", clip.fileUrl);
 
-        const signature = cloudinary.utils.api_sign_request(
-            { public_id: clip.cloudinaryPublicId, timestamp },
-            config.api_secret
-        );
+        //Cloudinary "untrusted" restriction bypass
+        const fileRes = await fetch(clip.fileUrl);
+        console.log("Status:", fileRes.status);
 
-        const apiDownloadUrl =
-            `https://api.cloudinary.com/v1_1/${config.cloud_name}/raw/download` +
-            `?public_id=${encodeURIComponent(clip.cloudinaryPublicId)}` +
-            `&api_key=${config.api_key}` +
-            `&timestamp=${timestamp}` +
-            `&signature=${signature}`;
+        if (!fileRes.ok) return res.status(502).json({ error: "Failed to fetch file from Cloudinary" });
 
-        const fileRes = await fetch(apiDownloadUrl);
-        console.log("Cloudinary API download status:", fileRes.status);
-        if (!fileRes.ok) {
-            const errBody = await fileRes.text().catch(() => "");
-            console.error("Cloudinary API error body:", errBody);
-            return res.status(502).json({ error: "Failed to fetch file from Cloudinary" });
-        }
+        res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(clip.title)}"`); //direct download
 
-        res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(clip.title)}"`);
+        /**
+         *@setHeader  standard http response header (server -> browser (data type information))
+         *@Content_Type tells the type of file
+         * @fileRes_get while fetching response from cloudinary (clip.fileUrl) -> it aleady has content-type, this part extracts it
+         * @default application/octet-stream if content-type is not set then defualt (just enables download)
+         */
         res.setHeader("Content-Type", fileRes.headers.get("content-type") || "application/octet-stream");
+
+        //file size
         const contentLength = fileRes.headers.get("content-length");
         if (contentLength) res.setHeader("Content-Length", contentLength);
 
@@ -77,12 +69,8 @@ router.get("/:id/download", authMiddleware, async (req, res) => {
 });
 
 
-
-
-
 /**
  @desc  Schedule Cloudinary deletion to match MongoDB TTL
-
  */
 
 function scheduleCloudinaryDelete(publicId, delayMs) {
@@ -107,16 +95,24 @@ function scheduleCloudinaryDelete(publicId, delayMs) {
 router.post("/upload", authMiddleware, upload.single("file"),
     async (req, res) => {
         try {
+            //req.file -> an object which has fie data with buffer
             if (!req.file) return res.status(400).json({ error: "No file uploaded" })
 
-            const { originalname, mimetype, buffer, size } = req.file;
+            /**
+             * @buffer -> temporary memory container (ram me binary formate me data store)
+             *          1. fast, 2. easy, 3. streaming possible for service like cloudinary
+             * @mimetype -> file type PDF, image, video, etc
+             */
+
+            const { originalname, mimetype, buffer, size } = req.file; //through multer
 
             //upload raw file to cloudinary
             const result = await uploadToCloudinary(buffer, {
                 folder: `clipsync/${req.user.id}`,
+                //spaces replace with underscore _
                 public_id: `${Date.now()}_${originalname.replace(/\s+/g, "_")}`,
                 resource_type: "raw",
-                use_filename: false,
+                use_filename: false, //custon file name -> public id
             })
 
             //save metadata clip doc with cloudinary
@@ -152,3 +148,9 @@ router.post("/upload", authMiddleware, upload.single("file"),
     })
 
 module.exports = router
+
+
+/**
+ * @upload_flow -> Client → Multer → Buffer → Streamifier → Cloudinary → MongoDB → Response
+ * @download_flow -> Client → Backend → Fetch Cloudinary → Stream → Client Download
+ */

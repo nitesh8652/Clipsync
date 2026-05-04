@@ -39,7 +39,6 @@ const clipSchema = new mongoose.Schema({
         type: String, // Cloudinary secure_url
         default: null,
     },
-    // ─────────────────────────────────────────────────────────────────────
 
     expiresAt: {
         type: Date,
