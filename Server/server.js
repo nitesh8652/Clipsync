@@ -6,6 +6,7 @@ const passport = require("passport");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const startCleanupJob = require ("./Jobs/cleanup")
 require("dotenv").config();
 require("./Config/passport");
 
@@ -98,7 +99,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // DB Connect
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("✅ DB Connected!"))
+    .then(() => {
+        console.log("✅ DB Connected!")
+        startCleanupJob() //start after db is ready
+    })
     .catch((err) => {
         console.error("❌ DB Connection Error:", err);
         process.exit(1);

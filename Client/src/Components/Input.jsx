@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowUp, FileText, Plus, Loader2, Paperclip } from "lucide-react";
 import Navbar from "./Navbar";
 import Home from "./Home";
-import { useSocket } from "../../Hooks/useSocket";
-import { fetchClips, createClip, deleteClip, uploadClipFile } from "../../api/clips";
+import { useSocket } from "../Hooks/useSocket";
+import { fetchClips, createClip, deleteClip, uploadClipFile } from "../api/clips";
+import Room from '../Components/Room'
 
 const typeStyles = [
   { iconBg: "#e8f8f5", iconColor: "#2fa38a" },
@@ -252,7 +253,11 @@ export default function ClipInput() {
 
  return (
     <>
+
       <Navbar />
+    
+      <Room />
+    
       <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
         <div className="text-center mb-8 mt-8">
           <h1 className="text-[22px] font-extrabold text-white/85 tracking-wide mb-1">

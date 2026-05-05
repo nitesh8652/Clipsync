@@ -30,7 +30,7 @@ const clipSchema = new mongoose.Schema({
     iconBg: String,
     iconColor: String,
 
-    // ── Cloudinary fields (only set for uploaded files) ───────────────────
+    // ── Cloudinary fields (only set for uploaded files) 
     cloudinaryPublicId: {
         type: String,
         default: null,
@@ -43,7 +43,7 @@ const clipSchema = new mongoose.Schema({
     expiresAt: {
         type: Date,
         default: () => new Date(Date.now() + 6 * 60 * 60 * 1000),
-        index: { expireAfterSeconds: 0 }, // MongoDB TTL index — deletes doc automatically
+       expires: 0,
     },
 }, { timestamps: true });
 

@@ -8,7 +8,7 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
-import { downloadClipFile } from "../../api/clips";
+import { downloadClipFile } from "../api/clips";
 
 function HistoryCard({ item, index, onDelete }) {
   const [copied, setCopied] = useState(false);
