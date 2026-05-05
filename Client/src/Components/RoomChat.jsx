@@ -1,9 +1,9 @@
 import React from 'react'
 
-const RoomHome = () => {
+const RoomChat = () => {
   return (
     <div>RoomHome</div>
   )
 }
 
-export default RoomHome
+export default RoomChat
