@@ -2,6 +2,7 @@
 const cron = require("node-cron");
 const Clip = require("../Models/file.model");
 const cloudinary = require("../Config/cloudinary");
+const mongoose = require("mongoose");
 
 /**
  * Runs every 15 minutes.
@@ -10,6 +11,12 @@ const cloudinary = require("../Config/cloudinary");
  */
 function startCleanupJob() {
   cron.schedule("*/15 * * * *", async () => {
+
+    if(mongoose.connection.readyState !== 1) {
+         console.warn("⏭️  Cleanup skipped — DB not connected (readyState:", mongoose.connection.readyState, ")"); //mongoose recoonect when it sleeps to perform corn job
+         return
+    }
+
     try {
       const now = new Date();
 
