@@ -22,7 +22,7 @@ router.get("/google/callback",
                 { expiresIn: "7d" }
             );
             console.log("Avatar being signed:", req.user.avatar);
-            res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${token}`);
+          res.redirect(`${process.env.FRONTEND_URL}/?token=${token}`);
         } catch (err) {
             console.error("JWT Error:", err);
             res.status(500).json({ error: "Authentication failed" });
