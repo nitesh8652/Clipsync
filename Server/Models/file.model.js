@@ -40,11 +40,6 @@ const clipSchema = new mongoose.Schema({
         default: null,
     },
 
-    expiresAt: {
-        type: Date,
-        default: () => new Date(Date.now() + 6 * 60 * 60 * 1000),
-       expires: 0,
-    },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Clip", clipSchema);

@@ -6,7 +6,6 @@ const passport = require("passport");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-const startCleanupJob = require ("./Jobs/cleanup")
 require("dotenv").config();
 require("./Config/passport");
 
@@ -97,16 +96,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// DB Connect
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 10000,  // wait up to 10s for Atlas
+    heartbeatFrequencyMS: 30000,      // ping every 30s to keep alive
+    socketTimeoutMS: 45000,
+})
     .then(() => {
         console.log("✅ DB Connected!")
-        startCleanupJob() //start after db is ready
     })
     .catch((err) => {
         console.error("❌ DB Connection Error:", err);
         process.exit(1);
     });
+
+// ADD after the connect block:
+mongoose.connection.on("disconnected", () => console.warn("⚠️  MongoDB disconnected — reconnecting..."));
+mongoose.connection.on("reconnected",  () => console.log("✅  MongoDB reconnected"));
 
 // Session -> server side memory to track user
 app.use(session({
@@ -135,3 +140,4 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {  // use `server.listen` not `app.listen`
     console.log(`🚀 Server running on port ${PORT}`);
 });
+

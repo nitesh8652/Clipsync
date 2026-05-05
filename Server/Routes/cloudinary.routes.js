@@ -7,7 +7,6 @@ const upload = require("../Middleware/upload")
 const cloudinary = require("../Config/cloudinary")
 
 
-const TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 
 /**
@@ -73,18 +72,7 @@ router.get("/:id/download", authMiddleware, async (req, res) => {
  @desc  Schedule Cloudinary deletion to match MongoDB TTL
  */
 
-function scheduleCloudinaryDelete(publicId, delayMs) {
-    setTimeout(async () => {
-        try {
-            await cloudinary.uploader.destroy(publicId, {
-                resource_type: "raw"
-            })
-            console.log(`🗑️  Cloudinary asset deleted: ${publicId}`)
-        } catch (err) {
-            console.error("Cloudinary auto-delete failed:", err.message)
-        }
-    }, delayMs)
-}
+
 
 /**
  * @desc upload a file to cloudinary
@@ -111,7 +99,7 @@ router.post("/upload", authMiddleware, upload.single("file"),
                 folder: `clipsync/${req.user.id}`,
                 //spaces replace with underscore _
                 public_id: `${Date.now()}_${originalname.replace(/\s+/g, "_")}`,
-                resource_type: "raw",
+                resource_type: "auto",
                 use_filename: false, //custon file name -> public id
             })
 
@@ -129,8 +117,6 @@ router.post("/upload", authMiddleware, upload.single("file"),
 
             })
 
-            //schedule cloudinary delete 6 hours            
-            scheduleCloudinaryDelete(result.public_id, TTL_MS)
             res.status(201).json({ clip })
 
         } catch (err) {

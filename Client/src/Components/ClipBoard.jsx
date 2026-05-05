@@ -4,7 +4,6 @@ import Navbar from "./Navbar";
 import Home from "./Home";
 import { useSocket } from "../Hooks/useSocket";
 import { fetchClips, createClip, deleteClip, uploadClipFile } from "../api/clips";
-import Room from './Ui/Room'
 
 const typeStyles = [
   { iconBg: "#e8f8f5", iconColor: "#2fa38a" },
@@ -39,7 +38,7 @@ function decodeToken(token) {
   catch { return null; }
 }
 
-const ACCEPTED_FILE_TYPES = ".pdf,.ppt,.pptx,.doc,.docx,.zip";
+const ACCEPTED_FILE_TYPES = ".pdf,.ppt,.pptx,.doc,.docx,.zip,.jpg,.jpeg,.png,.gif,.webp,.svg";
 
 export default function ClipInput() {
   const [value, setValue] = useState("");
@@ -195,12 +194,6 @@ export default function ClipInput() {
 
     setUploadError(null)
 
-    //validate file size
-    if (file.size > 20 * 1024 * 1024) {
-      setUploadError("File size must be less than 20 MB");
-      return;
-    }
-
     const { iconBg, iconColor } = randomStyle();
 
     //showing uploading card immediately
@@ -255,7 +248,7 @@ export default function ClipInput() {
     <>
 
       <Navbar />
-      <Room />
+   
     
       <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">
         <div className="text-center mb-8 mt-8">
@@ -291,6 +284,8 @@ export default function ClipInput() {
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={1}
+              style={{ maxHeight: "160px", overflowY: "auto" }}
+              onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
                 placeholder="Paste here anything..."
                 className="flex-1 bg-transparent p-0.75 outline-none text-white/88 text-[14px] resize-none placeholder:text-white/25"
               />
@@ -310,7 +305,7 @@ export default function ClipInput() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            title="Attach file (PDF, PPT, DOC, ZIP — max 10 MB)"
+            title="Attach file (PDF, PPT, DOC, ZIP)"
             className="absolute left-3 bottom-3.25 cursor-pointer p-1 text-white/80 hover:bg-black/20 rounded-xl disabled:opacity-40"
           >
             {uploading
@@ -334,10 +329,7 @@ export default function ClipInput() {
           </p>
         )}
  
-        {/* Hint about supported file types */}
-        <p className="text-[10px] text-white/15 mt-2">
-          Attach: PDF · PPT · DOC · ZIP &nbsp;·&nbsp; max 10 MB &nbsp;·&nbsp; auto-deleted after 6 h
-        </p>
+       
       </div>
  
       <Home items={items} loading={loading} onDelete={handleDelete} />

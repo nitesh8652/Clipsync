@@ -68,7 +68,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
         if (clip.cloudinaryPublicId) {
             try {
                 await cloudinary.uploader.destroy(clip.cloudinaryPublicId, {
-                    resource_type: "raw"
+                    resource_type: "auto"
                 });
                 console.log(`🗑️  Cloudinary asset deleted: ${clip.cloudinaryPublicId}`);
             } catch (cloudErr) {
