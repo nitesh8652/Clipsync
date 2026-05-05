@@ -4,7 +4,7 @@ import Navbar from "./Navbar";
 import Home from "./Home";
 import { useSocket } from "../Hooks/useSocket";
 import { fetchClips, createClip, deleteClip, uploadClipFile } from "../api/clips";
-import Room from '../Components/Room'
+import Room from './Ui/Room'
 
 const typeStyles = [
   { iconBg: "#e8f8f5", iconColor: "#2fa38a" },
@@ -255,7 +255,6 @@ export default function ClipInput() {
     <>
 
       <Navbar />
-    
       <Room />
     
       <div className="bg-[#1F1F1E] flex flex-col items-center justify-center px-6 font-[Sora,sans-serif]">

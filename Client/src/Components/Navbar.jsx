@@ -23,10 +23,9 @@ export default function Navbar() {
     }
   }, [])
 
-  const handleSignIn = () => {
-    window.location.href = 'http://localhost:5000/auth/google'
-    console.log("Sign in clicked");
-  }
+const handleSignIn = () => {
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/google`
+}
 
   const handleSignOut = () => {
     localStorage.removeItem("token")
