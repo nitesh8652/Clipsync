@@ -12,6 +12,8 @@ require("./Config/passport");
 const routes = require("./Routes/routes");
 const clipRoutes = require("./Routes/clips.route");
 const cloudinaryRoutes = require("./Routes/cloudinary.routes");
+const Clip = require("./Models/file.model");
+const { destroyCloudinaryAsset } = require("./Utils/cloudinary.util");
 
 const app = express();
 const server = http.createServer(app); // wrap express in http server to upgrade connections for Socket.IO
@@ -65,6 +67,18 @@ io.on("connection", (socket) => {
         }
     });
 
+    // When a client toggles temp/permanent, broadcast the updated clip
+    socket.on("clip:update", (clip) => {
+        const sockets = userSockets.get(userId);
+        if (sockets) {
+            sockets.forEach((sid) => {
+                if (sid !== socket.id) {
+                    io.to(sid).emit("clip:update", clip);
+                }
+            });
+        }
+    });
+
     // When a client deletes a clip, broadcast to other devices
     socket.on("clip:delete", (clipId) => {
         const sockets = userSockets.get(userId);
@@ -112,6 +126,31 @@ mongoose.connect(process.env.MONGO_URI, {
 // ADD after the connect block:
 mongoose.connection.on("disconnected", () => console.warn("⚠️  MongoDB disconnected — reconnecting..."));
 mongoose.connection.on("reconnected",  () => console.log("✅  MongoDB reconnected"));
+
+// One-time cleanup for clips expired before the TTL field existed (removes orphaned Cloudinary assets)
+mongoose.connection.once("open", async () => {
+    try {
+        const legacy = await Clip.find({
+            expiresAt: { $ne: null, $lte: new Date() },
+            ttlAt: null,
+        });
+
+        for (const clip of legacy) {
+            if (clip.cloudinaryPublicId) {
+                try {
+                    await destroyCloudinaryAsset(clip.cloudinaryPublicId, clip.cloudinaryResourceType);
+                } catch (cloudErr) {
+                    console.error("Cloudinary cleanup failed:", cloudErr.message);
+                }
+            }
+            await Clip.deleteOne({ _id: clip._id });
+        }
+
+        if (legacy.length) console.log(`🧹 Cleaned ${legacy.length} legacy expired clip(s)`);
+    } catch (err) {
+        console.error("Legacy cleanup error:", err);
+    }
+});
 
 // Session -> server side memory to track user
 app.use(session({

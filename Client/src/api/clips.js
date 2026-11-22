@@ -11,13 +11,25 @@ function authHeaders() {
     };
 }
 
+// Auto-logout if server returns 401 (deleted account / expired token)
+function handleUnauthorized(res) {
+    if (res.status === 401) {
+        localStorage.removeItem("token");
+        document.cookie.split(";").forEach((c) => {
+            document.cookie = c.trim().split("=")[0] + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+        });
+        window.location.replace("/login");
+    }
+}
+
 export async function fetchClips() {
     const res = await fetch(`${API_URL}/clips`, { headers: authHeaders() });
+    handleUnauthorized(res);
     if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Something went wrong");
     }
-    return res.json(); // { clips: [...] }
+    return res.json();
 }
 
 export async function createClip(clipData) {
@@ -27,6 +39,26 @@ export async function createClip(clipData) {
         body: JSON.stringify(clipData), //The browser doesn’t know how to convert this into a format the server understands -> converts object into string
     });
     if (!res.ok) throw new Error("Failed to create clip");
+    return res.json(); // { clip }
+}
+
+export async function updateClip(id, clipData) {
+    const res = await fetch(`${API_URL}/clips/${id}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(clipData),
+    });
+    if (!res.ok) throw new Error("Failed to update clip");
+    return res.json(); // { clip }
+}
+
+export async function saveClip(id, saved) {
+    const res = await fetch(`${API_URL}/clips/${id}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ saved }),
+    });
+    if (!res.ok) throw new Error("Failed to save clip");
     return res.json(); // { clip }
 }
 
@@ -44,11 +76,12 @@ export async function deleteClip(id) {
  * sends multipart form data so multer could process it 
  */
 
-export async function uploadClipFile(file, { iconBg = "#f0fdf4", iconColor = "#22c55e" }) {
+export async function uploadClipFile(file, { iconBg = "#f0fdf4", iconColor = "#22c55e", temporary = false } = {}) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("iconBg", iconBg);
     formData.append("iconColor", iconColor);
+    formData.append("temporary", temporary ? "true" : "false");
     const res = await fetch(`${API_URL}/clips/upload`, {
         method: "POST",
         headers: {

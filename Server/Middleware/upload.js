@@ -18,6 +18,7 @@ const ALLOWED_MIME_TYPES = [
 
 const upload = multer({
     storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 }, // hard cap; temporary clips are capped at 15MB in the route
     fileFilter: (_req, file, cb) => {
         if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
             cb(null, true);

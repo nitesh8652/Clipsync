@@ -5,7 +5,8 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function useSocket(token, {
     onNewClip,
-    onDeleteClip
+    onDeleteClip,
+    onUpdateClip
 } = {}) {
 
     //Doesn’t trigger re-render when updated
@@ -35,6 +36,7 @@ export function useSocket(token, {
 
         socket.on("clip:new", (clip) => onNewClip?.(clip))
         socket.on("clip:delete", (clipId) => onDeleteClip?.(clipId))
+        socket.on("clip:update", (clip) => onUpdateClip?.(clip))
 
         socketRef.current = socket
         return () => socket.disconnect()
@@ -51,9 +53,14 @@ export function useSocket(token, {
         socketRef.current?.emit("clip:delete", clipId)
     }, [])
 
+    const emitUpdateClip = useCallback((clip) => {
+        socketRef.current?.emit("clip:update", clip)
+    }, [])
+
     return {
         emitNewClip,
-        emitDeleteClip
+        emitDeleteClip,
+        emitUpdateClip
     }
 
 }

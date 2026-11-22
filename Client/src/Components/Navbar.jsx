@@ -1,5 +1,7 @@
 import { User2Icon, UserCheck2Icon, UserLockIcon, UserMinus2, UserPlus2Icon } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Download } from "lucide-react";
 
 
 const GoogleIcon = () => (
@@ -14,6 +16,8 @@ const GoogleIcon = () => (
 export default function Navbar() {
 
   const [user, setUser] = useState(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("token")
@@ -23,20 +27,36 @@ export default function Navbar() {
     }
   }, [])
 
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") setInstallPrompt(null);
+  };
+
 const handleSignIn = () => {
     window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/google`
 }
 
   const handleSignOut = () => {
-    localStorage.removeItem("token")
-    setUser(null)
-    console.log("Sign out clicked");
+    localStorage.removeItem("token");
+    // Clear all cookies
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c.trim().split("=")[0] + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+    });
+    setUser(null);
+    navigate("/login", { replace: true });
   }
 
   return (
     <nav
-      className="w-full flex items-center justify-between px-6 py-3 border-b border-stone-200 dark:border-stone-700 bg-[#1F1F1E]"
-
+      className="w-full flex items-center justify-between px-4 sm:px-6 py-3 border-b border-stone-700 bg-[#1F1F1E]"
     >
       {/* Logo */}
       <div
@@ -47,57 +67,60 @@ const handleSignIn = () => {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-2 sm:gap-3">
+        {/* Install App button — only shown when browser fires beforeinstallprompt (Android Chrome) */}
+        {installPrompt && (
+          <button
+            onClick={handleInstall}
+            title="Install ClipSync app"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#4770C2]/20 hover:bg-[#4770C2]/30 border border-[#4770C2]/40 text-[#7aa0e8] text-xs font-semibold transition-colors"
+          >
+            <Download size={13} />
+            <span className="hidden sm:inline">Install App</span>
+            <span className="sm:hidden">Install</span>
+          </button>
+        )}
         {user ? (
-          
           <>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-sm text-stone-700 hover:bg-stone-50 font-semibold">
-
+              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg border border-stone-300 bg-white text-xs sm:text-sm text-stone-700 hover:bg-stone-50 font-semibold">
               <GoogleIcon />
               Logout
             </button>
           </>
         ) :
-
           <button
             onClick={handleSignIn}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg
-            bg-white text-black font-medium text-sm
-            hover:scale-[1.03] hover:shadow-md transition-all duration-200"          >
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg
+            bg-white text-black font-medium text-xs sm:text-sm
+            hover:scale-[1.03] hover:shadow-md transition-all duration-200">
             <GoogleIcon />
-            <span className="text-[13px] font-medium">Sign in with Google</span>
+            <span className="text-[12px] sm:text-[13px] font-medium">Sign in with Google</span>
           </button>
-
         }
 
         {user && (
-
           <div className="relative group">
-            <button className="w-9 h-9 rounded-full overflow-hidden border border-stone-300 shadow-2xl">
+            <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-stone-300 shadow-2xl">
               {user?.avatar && (
                 <img
                   src={user.avatar}
                   alt={user.name}
-                  className="w-full h-full object-cover "
+                  className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                   onError={(e) => { e.target.style.display = 'none' }}
                 />
-
               )}
             </button>
-
             {user?.name && (
-              <div className="absolute right-0 top-11 bg-[#2C2C2A] text-white/80 text-xs px-3 py-1.5 rounded-lg 
-            opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap font-bold border border-stone-700 mt-4">
+              <div className="absolute right-0 top-11 bg-[#2C2C2A] text-white/80 text-xs px-3 py-1.5 rounded-lg
+            opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap font-bold border border-stone-700 mt-4 z-50">
                 {user.name}
               </div>
             )}
           </div>
-
         )}
-
       </div>
     </nav>
   );

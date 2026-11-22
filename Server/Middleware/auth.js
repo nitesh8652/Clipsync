@@ -1,26 +1,25 @@
 const jwt = require("jsonwebtoken");
+const User = require("../Models/user");
 
-function authMiddleware(req,res,next){
+async function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
-    //no header or wrong formate -> UNAUTHORIZED 
-    if(!authHeader || !authHeader.startsWith("Bearer ")){
-        return res.status(401).json({error:"No Token Provided"})
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "No Token Provided" });
     }
 
-    /**
-     @description splits the header by space and takes the second part which is the token 
-     @example output has ["Bearer", "eyJhbGciOi..."]
-     @returns split[1] gets only the token 
-     */
-    const token = authHeader.split(" ")[1]
-    try{
-        //payload consist of user data (id, username)
-        const payload = jwt.verify(token, process.env.JWT_SECRET)
-        //stores the decoded information in req.user
+    const token = authHeader.split(" ")[1];
+    try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+        // Verify user still exists in DB — catches deleted accounts
+        const user = await User.findById(payload.id).select("_id");
+        if (!user) return res.status(401).json({ error: "Account not found" });
+
         req.user = payload;
         next();
-    }catch(err){
-        return res.status(401).json({error:"Invalid Token"})
+    } catch (err) {
+        return res.status(401).json({ error: "Invalid Token" });
     }
 }
-module.exports = authMiddleware
+
+module.exports = authMiddleware;
