@@ -21,7 +21,7 @@ const server = http.createServer(app); // wrap express in http server to upgrade
 // Socket.IO setup
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:5173", // allows WebSocket connections only from frontend
+        origin: process.env.CLIENT_URL,
         credentials: true,
     },
 });
@@ -101,9 +101,12 @@ io.on("connection", (socket) => {
     });
 });
 
+// Health check (no auth, cheap for uptime pingers)
+app.get("/health", (req, res) => res.sendStatus(200));
+
 // CORS
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.CLIENT_URL,
     credentials: true,
 }));
 
@@ -171,9 +174,6 @@ app.use(passport.session());
 app.use("/auth", routes);
 app.use("/clips", clipRoutes);
 app.use("/clips", cloudinaryRoutes);
-
-// Health check
-app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {  // use `server.listen` not `app.listen`
