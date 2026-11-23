@@ -18,10 +18,14 @@ const { destroyCloudinaryAsset } = require("./Utils/cloudinary.util");
 const app = express();
 const server = http.createServer(app); // wrap express in http server to upgrade connections for Socket.IO
 
+// Support multiple allowed origins via comma-separated CLIENT_URL
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+    .split(",").map(o => o.trim());
+
 // Socket.IO setup
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL,
+        origin: allowedOrigins,
         credentials: true,
     },
 });
@@ -106,7 +110,7 @@ app.get("/health", (req, res) => res.sendStatus(200));
 
 // CORS
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: allowedOrigins,
     credentials: true,
 }));
 
