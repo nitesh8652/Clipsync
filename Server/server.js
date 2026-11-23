@@ -16,19 +16,28 @@ const Clip = require("./Models/file.model");
 const { destroyCloudinaryAsset } = require("./Utils/cloudinary.util");
 
 const app = express();
-const server = http.createServer(app); // wrap express in http server to upgrade connections for Socket.IO
+const server = http.createServer(app);
 
-// Support multiple allowed origins via comma-separated CLIENT_URL
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
-    .split(",").map(o => o.trim());
+const allowedOrigins = [
+    process.env.FRONTEND_URL?.replace(/\/$/, ""),
+    "http://localhost:5173",
+].filter(Boolean);
+
+console.log("CORS allowed origins:", allowedOrigins);
+
+const corsOptions = {
+    origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        console.log("CORS blocked origin:", origin);
+        cb(null, false);
+    },
+    credentials: true,
+};
+
+app.use(cors(corsOptions)); // must come before express.json(), routes and auth
 
 // Socket.IO setup
-const io = new Server(server, {
-    cors: {
-        origin: allowedOrigins,
-        credentials: true,
-    },
-});
+const io = new Server(server, { cors: corsOptions });
 
 // tracks devices per user (one user, many devices)
 const userSockets = new Map();
@@ -107,12 +116,6 @@ io.on("connection", (socket) => {
 
 // Health check (no auth, cheap for uptime pingers)
 app.get("/health", (req, res) => res.sendStatus(200));
-
-// CORS
-app.use(cors({
-    origin: allowedOrigins,
-    credentials: true,
-}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
